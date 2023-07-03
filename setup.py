@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 setup(
     name='jsonjavascriptnotation',
     packages=find_packages(include=['jsonjavascriptnotation']),
-    version='0.1.5',
+    version='0.1.6',
     description='Access JSON using Javascript Object Notation.',
     long_description=long_description,
     long_description_content_type="text/markdown",

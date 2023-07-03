@@ -12,7 +12,7 @@ clear:
 	rm -rf venv
 	rm -rf dist
 	rm -rf build
-	rm -rf collections_wrapper.egg-info
+	rm -rf *.egg-info
 	rm -rf .eggs
 	rm -rf .pytest_cache
 

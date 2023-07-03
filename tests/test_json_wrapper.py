@@ -29,6 +29,11 @@ def test_employee():
     assert json_obj2.employee.married
     assert json_obj2.employee.occupation == 'writer'
 
+    json_obj2.employee.name = 'Cesar'
+    json_obj2.employee.salary = 500_000
+    expected = '{"employee": {"name": "Cesar", "salary": 500000, "married": true, "occupation": "writer"}}'
+    assert f'{json_obj2}' == expected
+
 
 def test_menu():
     json_txt = """
@@ -91,3 +96,30 @@ def test_openapi():
         assert 'oauth2' in json_obj2.defs.security_scheme.properties.type.enum
         assert 'mutualTLS' in json_obj2.defs.security_scheme.properties.type.enum
         assert 'xyz' not in json_obj2.defs.security_scheme.properties.type.enum
+
+
+def test_special_chars():
+    json_txt = """
+    {  
+        "type": "array",
+        "$id": "https://spec.openapis.org/oas/3.1/schema/2022-10-07",
+        "then": {
+          "$ref": "#/$defs/reference"
+        }
+    }  
+    """
+    json_obj1 = json.loads(json_txt)
+    json_obj2 = JONFactory.wrap(json_obj1)
+
+    assert json_obj2.type == 'array'
+    assert json_obj2.id == 'https://spec.openapis.org/oas/3.1/schema/2022-10-07'
+    assert json_obj2.then.ref == '#/$defs/reference'
+
+    expected = '{"type": "array", "$id": "https://spec.openapis.org/oas/3.1/schema/2022-10-07", "then": {"$ref": "#/$defs/reference"}}'
+    assert f'{json_obj2}' == expected
+
+    json_obj3 = json.loads(f'{json_obj2}')
+    json_obj4 = JONFactory.wrap(json_obj3)
+    assert json_obj4.type == 'array'
+    assert json_obj4.id == 'https://spec.openapis.org/oas/3.1/schema/2022-10-07'
+    assert json_obj4.then.ref == '#/$defs/reference'

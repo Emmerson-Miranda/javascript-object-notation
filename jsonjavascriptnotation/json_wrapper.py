@@ -5,29 +5,52 @@ class JsonWrapperException(Exception):
 class Wrapper:
 
     def __init__(self, collection=None):
+        self.__wrapper_normalized_names = {}
         if collection:
             self._static_load(self, collection)
 
     def __repr__(self):
         res = "{"
         for e in self.__dict__.items():
+            name = e[0]
+            if name == "_Wrapper__wrapper_normalized_names":
+                continue
             if len(res) > 1:
                 res += ', '
-            val = f'"{e[1]}"' if isinstance(e[1], str) else e[1]
-            res += f'"{e[0]}": {val}'
+            if isinstance(e[1], str):
+                val = f'"{e[1]}"'
+            elif isinstance(e[1], bool):
+                val = 'true' if e[1] else 'false'
+            else:
+                val = e[1]
+            if name in self.__wrapper_normalized_names.keys():
+                name = self.__wrapper_normalized_names[name]
+            res += f'"{name}": {val}'
         res += "}"
         return res
 
     @staticmethod
+    def _normalize(instance, name):
+        res = name
+        normalized = False
+        if res.find('$') > -1:
+            res = res.replace('$', '')
+            normalized = True
+        if res.find('-') > -1:
+            res = res.replace('-', '_')
+            normalized = True
+        if res.find('#') > -1:
+            res = res.replace('#', '')
+            normalized = True
+        if normalized:
+            instance.__wrapper_normalized_names.update({res: name})
+        return res
+
+    @staticmethod
     def _set_attribute(instance, name, value):
-        if name.find('$') > -1:
-            name = name.replace('$', '')
-        if name.find('-') > -1:
-            name = name.replace('-', '_')
-        if name.find('#') > -1:
-            name = name.replace('#', '')
-        if not hasattr(instance, name):
-            setattr(instance, name, value)
+        nname = Wrapper._normalize(instance, name)
+        if not hasattr(instance, nname):
+            setattr(instance, nname, value)
 
     @staticmethod
     def _static_load(instance, collection):
