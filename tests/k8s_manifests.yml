@@ -1,0 +1,231 @@
+apiVersion: v1
+data:
+  DISABLE_SUSPENSION: "true"
+  PROCESS_TIME_SIMULATION_MS: "200"
+  RMQ_CONSUMER_DLQ_CS: "rabbitmq:myexchange?connectionFactory=#consumerConnectionFactoryService&queue=myqueueDLQ&durable=true&autoDelete=false&automaticRecoveryEnabled=true&exchangePattern=InOnly&routingKey=dlq&exclusive=false&autoAck=false&transferException=true"
+  RMQ_CONSUMER_QUEUE_CS: "rabbitmq:myexchange?connectionFactory=#consumerConnectionFactoryService&queue=myqueue&routingKey=main&durable=true&autoDelete=false&automaticRecoveryEnabled=true&exclusive=false&autoAck=false&concurrentConsumers=10&prefetchCount=2&prefetchEnabled=true&transferException=true"
+  RMQ_UPSTREAM_CS: "undertow:http://upstream:10003/microservice/myservice?httpMethodRestrict=POST&exchangePattern=InOut"
+  RABBIT_CLIENT_SLEEP_ON_DISCONNECTION_ENABLE: "true"
+  RABBIT_CLIENT_SLEEP_ON_DISCONNECTION_MS: "5000"
+  RABBIT_HOST: "rabbitmq"
+  RABBIT_PORT: "5672"
+kind: ConfigMap
+metadata:
+  name: consumer-configmap
+
+---
+apiVersion: v1
+data:
+  PROCESS_TIME_SIMULATION_MS: "100"
+  RMQ_PRODUCER_QUEUE_CS: "rabbitmq:myexchange?connectionFactory=#producerConnectionFactoryService&routingKey=main&queue=myqueue&durable=true&autoDelete=false&exclusive=false&exchangePattern=InOnly"
+  RABBIT_HOST: "rabbitmq"
+  RABBIT_PORT: "5672"
+kind: ConfigMap
+metadata:
+  name: producer-configmap
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+spec:
+  ports:
+    - name: management
+      port: 15672
+      targetPort: 15672
+    - name: interface
+      port: 5672
+      targetPort: 5672
+  selector:
+    app: rabbitmq
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: producer-service
+  labels:
+    app: producer-service
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: prometheus
+      port: 8888
+      targetPort: 8888
+    - name: jmx
+      port: 16000
+      targetPort: 16000
+  selector:
+    app: producer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consumer-service
+  labels:
+    app: consumer-service
+spec:
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+    - name: prometheus
+      port: 8888
+      targetPort: 8888
+    - name: jmx
+      port: 16000
+      targetPort: 16000
+  selector:
+    app: consumer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: upstream
+  labels:
+    app: upstream
+spec:
+  ports:
+    - name: http
+      port: 10003
+      targetPort: 10003
+  selector:
+    app: upstream
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: rabbitmq
+    version: v1
+  name: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+        version: v1
+    spec:
+      containers:
+        - image: rabbitmq:3-management
+          imagePullPolicy: IfNotPresent
+          name: rabbitmq
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+          resources: {}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: upstream
+    version: v1
+  name: upstream
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: upstream
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: upstream
+        version: v1
+    spec:
+      containers:
+        - image: emmerson/upstream:mock
+          imagePullPolicy: IfNotPresent
+          name: upstream
+          ports:
+            - containerPort: 10003
+          resources: {}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: producer
+    version: v1
+  name: producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: producer
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: producer
+        version: v1
+    spec:
+      containers:
+        - image: emmerson/cdi-rabbit-producer:1.1.0
+          imagePullPolicy: IfNotPresent
+          name: cdi-rabbit-producer
+          ports:
+            - containerPort: 8080
+            - containerPort: 8888
+            - containerPort: 16000
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: producer-configmap
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: consumer
+    version: v1
+  name: consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: consumer
+        version: v1
+    spec:
+      containers:
+        - image: emmerson/cdi-rabbit-consumer:1.1.0
+          imagePullPolicy: IfNotPresent
+          name: cdi-rabbit-consumer
+          ports:
+            - containerPort: 9090
+            - containerPort: 9999
+            - containerPort: 16000
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: consumer-configmap
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always

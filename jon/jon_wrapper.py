@@ -1,4 +1,4 @@
-class JsonWrapperException(Exception):
+class JonException(Exception):
     pass
 
 
@@ -79,4 +79,4 @@ class JONFactory:
             return Wrapper(instance)
         if isinstance(instance, list):
             return [Wrapper(el) for el in instance]
-        raise JsonWrapperException(f'Type({type(instance)}) handing not supported!')
+        raise JonException(f'Type({type(instance)}) handing not supported!')

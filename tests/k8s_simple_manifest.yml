@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: consumer
+    version: v1
+  name: consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: consumer
+        version: v1
+    spec:
+      containers:
+        - image: emmerson/cdi-rabbit-consumer:1.1.0
+          imagePullPolicy: IfNotPresent
+          name: cdi-rabbit-consumer
+          ports:
+            - containerPort: 9090
+            - containerPort: 9999
+            - containerPort: 16000
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: consumer-configmap
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always

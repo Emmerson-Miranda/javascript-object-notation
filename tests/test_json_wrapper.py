@@ -1,7 +1,7 @@
 import os
 import json
 import inspect
-from jsonjavascriptnotation.json_wrapper import JONFactory
+from jon.jon_wrapper import JONFactory
 
 
 script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
